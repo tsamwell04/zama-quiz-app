@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Zama Quiz App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --start-btn: #ffca19;
+      --card-bg: #000000;
+      --page-grad-from: #ffca06;
+      --page-grad-to: #ffca09;
+      --text: #ffffff;
+      --dark: #222222;
+      --accent: #ffd369;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, Roboto, Arial, sans-serif;
+      background: linear-gradient(135deg, var(--page-grad-from), var(--page-grad-to));
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      text-align: center;
+    }
+    .container {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+    .helper { font-size: 40px; margin-bottom: 18px; opacity: 0.9; }
+    input[type="text"] {
+      width: 100%; max-width: 420px; padding: 12px 14px; border: none; border-radius: 10px;
+      font-size: 1rem; margin-bottom: 16px; outline: none;
+    }
+    .btn {
+      padding: 12px 18px; border: none; border-radius: 10px; cursor: pointer;
+      font-size: 1rem; transition: filter 0.2s ease; color: var(--dark);
+      background: var(--start-btn); margin-top: 8px;
+    }
+    .btn:hover { filter: brightness(0.95); }
+    .hidden { display: none; }
+
+    /* Quiz Screen */
+    .progress {
+      width: 100%; height: 8px; background: rgba(255, 255, 255, 0.2);
+      border-radius: 999px; overflow: hidden; margin-bottom: 12px;
+    }
+    .progress-fill {
+      width: 0%; height: 100%; background: var(--accent); transition: width 0.3s ease;
+    }
+    .question-header { font-size: 1.3rem; font-weight: 600; margin-bottom: 14px; opacity: 0.9; }
+    .question { font-size: 1.15rem; margin-bottom: 14px; font-weight: 500; }
+    .options { display: grid; gap: 10px; margin-bottom: 8px; }
+    .option {
+      padding: 12px; background: var(--text); color: var(--dark); border: none;
+      border-radius: 8px; cursor: pointer; font-size: 0.98rem; text-align: left;
+      transition: background 0.2s ease;
+    }
+    .option:hover { background: var(--accent); }
+
+    /* End Screen */
+    #end .result { font-size: 1.8rem; margin-bottom: 8px; color: var(--accent); }
+    #end .badge { display: inline-block; padding: 8px 12px; background: rgba(255, 255, 255, 0.1);
+      border-radius: 999px; font-weight: 600; margin-bottom: 6px; }
+    #end .sub { font-size: 1rem; opacity: 0.9; margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- Start Screen -->
+    <div id="start">
+      <p class="helper">What's your Name, <br> Zama Believer✨?</p>
+      <input type="text" id="playerName" placeholder="Enter your name" />
+      <br />
+      <button class="btn" onclick="startQuiz()">Start Quiz</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz" class="hidden">
+      <div class="progress"><div id="progressFill" class="progress-fill"></div></div>
+      <div class="question-header" id="qMeta">Question 1 of 20</div>
+      <div class="question" id="question"></div>
+      <div class="options" id="options"></div>
+    </div>
+
+    <!-- End Screen -->
+    <div id="end" class="hidden">
+      <div class="result" id="tierMessage"></div>
+      <div class="badge" id="nameBadge"></div>
+      <div class="sub" id="finalStats"></div>
+      <button class="btn" onclick="restartQuiz()">Restart Quiz</button>
+    </div>
+
+  </div>
+
+  <!-- ✅ Confetti Library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <script>
+ const quizData = [
+  { question: "What does Zama’s FHEVM protocol primarily enable?", options: ["Faster consensus algorithms","Confidential smart contracts on any L1/L2","Cheaper gas fees","Native cross-chain swaps"], answer: 1 },
+  { question: "What does Fully Homomorphic Encryption (FHE) allow?", options: ["Computing on encrypted data","Only faster consensus","Only storing data privately","Only compressing blocks"], answer: 0 },
+  { question: "The FHEVM protocol requires changes to the underlying blockchain.", options: ["True","False","Only for rollups","Only for EVM-compatible chains"], answer: 1 },
+  { question: "Which three technologies does the FHEVM protocol combine to ensure confidentiality and correctness?", options: ["FHE, ZK Proofs, MPC","Sharding, ZK Rollups, TEEs","Multisig, MPC, Rollups","Sidechains, Plasma, ZK-SNARKs"], answer: 0 },
+  { question: "Which of the following is NOT a component of the FHEVM architecture?", options: ["Coprocessor","Threshold Key Management Service (KMS)","Gateway","Layer-0 Consensus Engine"], answer: 3 },
+  { question: "Developers can use Solidity with FHEVM without learning cryptography.", options: ["True","False","Only for advanced contracts","Only for ERC20 tokens"], answer: 0 },
+  { question: "What is the role of the Coprocessor in the FHEVM protocol?", options: ["Generate FHE keys","Run heavy FHE computations offchain","Store encrypted values on the host chain","Replace the consensus mechanism"], answer: 1 },
+  { question: "What does the Threshold KMS achieve in the protocol?", options: ["Stores ciphertexts on-chain","Generates FHE keys and decrypts via MPC","Runs AI inference","Compresses blockchain state"], answer: 1 },
+  { question: "Which of these data types is supported in the FHEVM Solidity library?", options: ["Encrypted integers and booleans","Only integers","Only addresses","Only bytes"], answer: 0 },
+  { question: "Which operator is used in TFHE to allow exact, unlimited computations?", options: ["zkSNARKs","Programmable Bootstrapping (PBS)","Multi-party Key Splitting","Hashing"], answer: 1 },
+  { question: "What does the Access Control List (ACL) contract do?", options: ["Manages validator nodes","Tracks permissions for encrypted data","Stores private keys","Runs consensus"], answer: 1 },
+  { question: "Which of the following is a use case enabled by confidential smart contracts?", options: ["Public ERC-20 transfers","Sealed-bid token auctions","Faster block finality","Sharding"], answer: 1 },
+  { question: "Confidential swaps with FHEVM can reduce front-running and MEV.", options: ["True","False","Only on L2s","Only with wrapped tokens"], answer: 0 },
+  { question: "What does the select() operation in the Solidity FHE library do?", options: ["Randomly selects ciphertexts","Allows branching on encrypted values","Decrypts values","Generates keys"], answer: 1 },
+  { question: "Which component verifies that encrypted inputs are correctly constructed?", options: ["Relayer","Coprocessor","Oracle","Host Chain"], answer: 1 },
+  { question: "With FHEVM, do users manually encrypt and decrypt values before using dApps?", options: ["Yes, always","No, handled by the protocol","Only on Ethereum","Only for cross-chain"], answer: 1 },
+  { question: "What ensures encrypted inputs are valid and linked to a user?", options: ["Threshold KMS","Zero-Knowledge Proof of Knowledge (ZKPoK)","Oracle signatures","Relayer attestations"], answer: 1 },
+  { question: "Which confidentiality solution is most vulnerable to side-channel attacks?", options: ["ZK Proofs","MPC","TEEs","FHE"], answer: 2 },
+  { question: "In FHEVM, bridging encrypted values across chains requires re-encryption under a new key.", options: ["True","False","Only on EVM chains","Only with Oracles"], answer: 1 },
+  { question: "Which governance or identity use case is enabled by FHEVM?", options: ["Public token voting","Confidential voting & decentralized IDs","Validator staking rewards","Sharded governance pools"], answer: 1 },
+  { question: "Which future improvement is Zama aiming for?", options: ["Removing ACLs","Fully public verifiability of KMS","No encryption keys at all","Replacing Solidity"], answer: 1 },
+];
+
+function shuffleQuiz(data) {
+  for (let i = data.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [data[i], data[j]] = [data[j], data[i]];
+  }
+  return data;
+}
+
+const shuffledQuiz = shuffleQuiz([...quizData]);
+let currentQuestion = 0,
+    score = 0,
+    player = "";
+
+const startEl    = document.getElementById("start"),
+      quizEl     = document.getElementById("quiz"),
+      endEl      = document.getElementById("end"),
+      qMetaEl    = document.getElementById("qMeta"),
+      questionEl = document.getElementById("question"),
+      optionsEl  = document.getElementById("options"),
+      progressEl = document.getElementById("progressFill"),
+      tierEl     = document.getElementById("tierMessage"),
+      badgeEl    = document.getElementById("nameBadge"),
+      statsEl    = document.getElementById("finalStats");
+
+function startQuiz() {
+  const name = document.getElementById("playerName").value.trim();
+  if (!name) { alert("Please enter your name!"); return; }
+  player = name;
+  startEl.classList.add("hidden");
+  quizEl.classList.remove("hidden");
+  currentQuestion = 0; score = 0;
+  updateProgress();
+  loadQuestion();
+}
+
+function loadQuestion() {
+  const q = quizData[currentQuestion];
+  questionEl.textContent = q.question;
+  optionsEl.innerHTML = "";
+  q.options.forEach((opt,i) => {
+    const btn = document.createElement("button");
+    btn.className = "option";
+    btn.textContent = opt;
+    btn.onclick = () => checkAnswer(i);
+    optionsEl.appendChild(btn);
+  });
+}
+
+function checkAnswer(selected) {
+  if (selected === quizData[currentQuestion].answer) score++;
+  currentQuestion++;
+  updateProgress();
+  if (currentQuestion < quizData.length) loadQuestion();
+  else showResult();
+}
+
+function updateProgress() {
+  const total = quizData.length;
+  qMetaEl.textContent = `Question ${Math.min(currentQuestion+1, total)} of ${total}`;
+  const pct = Math.round((currentQuestion/total)*100);
+  progressEl.style.width = pct + "%";
+}
+
+function showResult() {
+  quizEl.classList.add("hidden");
+  endEl.classList.remove("hidden");
+  const total = quizData.length;
+  const pct   = Math.round((score/total)*100);
+  let tier;
+  if (pct <= 25)       tier = "Zama Observer";
+  else if (pct <= 50)  tier = "Zama Explorer";
+  else if (pct <= 75)  tier = "Zama Builder";
+  else if (pct <= 90)  tier = "Zama Maxi";
+  else                  tier = "Zama OG";
+  tierEl.textContent  = `🏆 Congrats, you're a ${tier}! 🏆`;
+  badgeEl.textContent = `Player: ${player}`;
+  statsEl.textContent = `You scored ${score} / ${total} (${pct}%).`;
+
+  // 🎉 Trigger confetti
+  confetti({
+    particleCount: 150,
+    spread: 80,
+    origin: { y: 0.6 }
+  });
+}
+
+function restartQuiz() {
+  endEl.classList.add("hidden");
+  startEl.classList.remove("hidden");
+  document.getElementById("playerName").value = "";
+  score = 0; currentQuestion = 0; player = "";
+  progressEl.style.width = "0%";
+}
+  </script>
+</body>
+</html>
